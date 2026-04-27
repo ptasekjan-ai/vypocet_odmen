@@ -38,7 +38,7 @@ const h5Rules = [
 ];
 
 const defaults = {
-  salary: 73630,
+  salary: 45000,
   kpsCode: "K2",
   kohpsCode: "H5",
   personalFulfillment: 100,
