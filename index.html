@@ -1,0 +1,256 @@
+<!doctype html>
+<html lang="cs">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Kalkulačka odměn</title>
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <main class="app-shell">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">Model podle souboru vypocet_odmen.xlsx</p>
+          <h1>Kalkulačka odměn</h1>
+        </div>
+        <div class="toolbar">
+          <button class="button button-ghost" type="button" id="resetButton" title="Vrátit hodnoty z Excelu">
+            <span class="icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="M4 4v6h6"></path><path d="M20 11a8 8 0 1 0-2.34 5.66"></path><path d="M4 10a9 9 0 0 1 15-4"></path></svg>
+            </span>
+            Excel
+          </button>
+          <button class="button" type="button" id="addScenarioButton" title="Uložit aktuální výpočet do porovnání">
+            <span class="icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="M12 5v14"></path><path d="M5 12h14"></path></svg>
+            </span>
+            Scénář
+          </button>
+        </div>
+      </header>
+
+      <section class="calculator-grid" aria-label="Výpočet odměny">
+        <form class="panel input-panel" id="rewardForm">
+          <div class="section-heading">
+            <h2>Vstupy</h2>
+            <span class="status-pill" id="coefficientState">kV: 100 %</span>
+          </div>
+
+          <label>
+            Základní mzda (ZM)
+            <div class="currency-input">
+              <input id="salary" name="salary" type="number" min="0" step="100" value="73630">
+              <span>Kč</span>
+            </div>
+          </label>
+
+          <div class="classification-box">
+            <div class="classification-title">
+              <span>Zařazení</span>
+              <strong id="classificationSummary">K2 / H5</strong>
+            </div>
+            <div class="field-row split">
+              <label>
+                Koeficient pohyblivé složky
+                <select id="kpsCode" name="kpsCode"></select>
+                <small class="role-hint" id="kpsRoleHint"></small>
+              </label>
+              <label>
+                Koeficient osobního hodnocení
+                <select id="kohpsCode" name="kohpsCode"></select>
+                <small class="role-hint" id="kohpsRoleHint"></small>
+              </label>
+            </div>
+            <div class="field-row triple">
+              <label>
+                Procento OH
+                <div class="percent-input">
+                  <input id="classificationPercent" name="classificationPercent" type="number" min="0" max="100" step="0.1" value="13.5" readonly>
+                  <span>%</span>
+                </div>
+              </label>
+              <label>
+                kPS
+                <div class="percent-input">
+                  <input id="kps" name="kps" type="number" min="0" max="200" step="0.1" value="45" readonly>
+                  <span>%</span>
+                </div>
+              </label>
+              <label>
+                kOH/PS
+                <div class="percent-input">
+                  <input id="kohps" name="kohps" type="number" min="0" max="100" step="0.1" value="30" readonly>
+                  <span>%</span>
+                </div>
+              </label>
+            </div>
+          </div>
+
+          <label id="personalTargetGroup">
+            Plnění osobních cílů pro kV
+            <div class="range-line">
+              <input id="personalFulfillment" name="personalFulfillment" type="range" min="0" max="200" step="1" value="100">
+              <output id="personalFulfillmentOutput">100 %</output>
+            </div>
+          </label>
+
+          <label>
+            PRP %
+            <div class="range-line">
+              <input id="prp" name="prp" type="range" min="0" max="150" step="1" value="100">
+              <output id="prpOutput">100 %</output>
+            </div>
+          </label>
+
+        </form>
+
+        <section class="panel results-panel" aria-live="polite">
+          <div class="section-heading">
+            <h2>Výsledek</h2>
+          </div>
+
+          <div class="result-hero">
+            <span>Celkově za rok</span>
+            <strong id="annualReward">0 Kč</strong>
+            <small id="monthlyReward">Měsíčně: 0 Kč</small>
+          </div>
+
+          <div class="formula-box">
+            <span>Výpočet RP</span>
+            <code id="formulaLine"></code>
+          </div>
+        </section>
+      </section>
+
+      <section class="lower-grid">
+        <section class="panel">
+          <div class="section-heading">
+            <h2>Podklad firemních cílů</h2>
+            <span class="status-pill" id="businessModeBadge">pro H1-H4</span>
+          </div>
+
+          <div class="business-grid">
+            <label>
+              HV plán
+              <div class="currency-input">
+                <input id="profitPlan" type="number" min="1" step="100000" value="67980000">
+                <span>Kč</span>
+              </div>
+            </label>
+            <label>
+              HV skutečnost
+              <div class="currency-input">
+                <input id="profitActual" type="number" min="0" step="100000" value="48510000">
+                <span>Kč</span>
+              </div>
+            </label>
+            <label>
+              Výnosy plán
+              <div class="currency-input">
+                <input id="revenuePlan" type="number" min="1" step="100000" value="409800000">
+                <span>Kč</span>
+              </div>
+            </label>
+            <label>
+              Výnosy skutečnost
+              <div class="currency-input">
+                <input id="revenueActual" type="number" min="0" step="100000" value="375095478">
+                <span>Kč</span>
+              </div>
+            </label>
+          </div>
+
+          <div class="business-summary">
+            <div>
+              <span>HV</span>
+              <strong id="profitFulfillment">0 %</strong>
+            </div>
+            <div>
+              <span>Výnosy PS</span>
+              <strong id="revenueFulfillment">0 %</strong>
+            </div>
+            <div>
+              <span>Průměr</span>
+              <strong id="businessAverage">0 %</strong>
+            </div>
+            <div>
+              <span>kV pro vybrané H</span>
+              <strong id="businessCoefficient">0 %</strong>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="section-heading">
+            <h2>Tabulka kV</h2>
+            <span class="status-pill" id="rulesBadge">H5</span>
+          </div>
+          <div id="rulesList"></div>
+        </section>
+      </section>
+
+      <section class="panel codebook-panel">
+        <div class="section-heading">
+          <h2>Číselníky koeficientů</h2>
+          <span class="status-pill">mzdový řád</span>
+        </div>
+        <div class="codebook-grid">
+          <div class="table-wrap">
+            <table class="compact-table">
+              <thead>
+                <tr>
+                  <th>Označení</th>
+                  <th>kPS</th>
+                  <th>Role</th>
+                </tr>
+              </thead>
+              <tbody id="kpsRows"></tbody>
+            </table>
+          </div>
+          <div class="table-wrap">
+            <table class="compact-table">
+              <thead>
+                <tr>
+                  <th>Označení</th>
+                  <th>kOH/PS</th>
+                  <th>Role</th>
+                </tr>
+              </thead>
+              <tbody id="kohpsRows"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel scenarios-panel">
+        <div class="section-heading">
+          <h2>Porovnání scénářů</h2>
+          <button class="icon-button danger" type="button" id="clearScenariosButton" title="Smazat scénáře">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18"></path><path d="M8 6V4h8v2"></path><path d="M19 6l-1 14H6L5 6"></path><path d="M10 11v5"></path><path d="M14 11v5"></path></svg>
+          </button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+            <th>Scénář</th>
+            <th>ZM</th>
+            <th>kV</th>
+                <th>Roční RP</th>
+                <th>Měsíční RP</th>
+                <th>Celkem měsíčně</th>
+              </tr>
+            </thead>
+            <tbody id="scenarioRows">
+              <tr>
+                <td colspan="6" class="empty-cell">Zatím bez uložených scénářů.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+
+    <script src="script.js"></script>
+  </body>
+</html>
