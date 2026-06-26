@@ -59,6 +59,8 @@ const inputIds = [
   "salary",
   "kpsCode",
   "kohpsCode",
+  "kvModeManual",
+  "kvModeTable",
   "personalFulfillment",
   "prp",
   "profitPlan",
@@ -74,17 +76,27 @@ const outputIds = [
   "kohps",
   "kpsRoleHint",
   "kohpsRoleHint",
-  "personalTargetGroup",
+  "modeTitle",
+  "kvModeHint",
+  "fulfillmentLabel",
+  "fulfillmentHint",
   "personalFulfillmentOutput",
   "prpOutput",
   "coefficientState",
   "monthlyReward",
   "annualReward",
+  "resultKv",
+  "resultPrp",
+  "resultSource",
   "formulaLine",
   "profitFulfillment",
   "revenueFulfillment",
   "businessAverage",
   "businessCoefficient",
+  "businessBandLabel",
+  "profitFulfillmentBar",
+  "revenueFulfillmentBar",
+  "businessAverageBar",
   "businessModeBadge",
   "rulesBadge",
   "rulesList",
@@ -99,13 +111,50 @@ function byId(id) {
   return document.getElementById(id);
 }
 
-function numberValue(id) {
-  const value = Number(elements[id].value);
+function parseLocaleNumber(rawValue) {
+  if (typeof rawValue === "number") {
+    return Number.isFinite(rawValue) ? rawValue : 0;
+  }
+
+  const compact = String(rawValue)
+    .trim()
+    .replace(/\u00a0/g, " ")
+    .replace(/kč|czk/gi, "")
+    .replace(/\s+/g, "");
+
+  if (!compact) {
+    return 0;
+  }
+
+  const hasComma = compact.includes(",");
+  const hasDot = compact.includes(".");
+  let normalized = compact;
+
+  if (hasComma && hasDot) {
+    normalized = compact.lastIndexOf(",") > compact.lastIndexOf(".")
+      ? compact.replace(/\./g, "").replace(",", ".")
+      : compact.replace(/,/g, "");
+  } else if (hasComma) {
+    normalized = compact.replace(",", ".");
+  }
+
+  const value = Number(normalized.replace(/[^\d.-]/g, ""));
   return Number.isFinite(value) ? value : 0;
+}
+
+function numberValue(id) {
+  return parseLocaleNumber(elements[id].value);
 }
 
 function percentValue(id) {
   return numberValue(id) / 100;
+}
+
+function clamp(value, min, max) {
+  if (!Number.isFinite(value)) {
+    return min;
+  }
+  return Math.min(Math.max(value, min), max);
 }
 
 function formatCurrency(value, digits = 0) {
@@ -143,6 +192,10 @@ function findByCode(options, code) {
   return options.find((option) => option.code === code) || options[0];
 }
 
+function getKvInputMode() {
+  return elements.kvModeTable.checked ? "table" : "manual";
+}
+
 function h5CoefficientFromFulfillment(percent) {
   if (percent <= 80) {
     return 0;
@@ -159,29 +212,48 @@ function h5CoefficientFromFulfillment(percent) {
   return (percent + 50) / 100;
 }
 
+function coefficientFromFulfillment(hCode, fulfillment) {
+  if (hCode === "H5") {
+    return {
+      band: null,
+      coefficient: h5CoefficientFromFulfillment(fulfillment),
+      label: "vzorec H5"
+    };
+  }
+
+  const band = corporateKvBands.find((item) => item.test(fulfillment));
+
+  return {
+    band,
+    coefficient: band && band.values[hCode] ? band.values[hCode] : 0,
+    label: band ? band.label : "mimo pásma"
+  };
+}
+
 function calculateBusinessValues(hCode) {
   const profitFulfillment = numberValue("profitPlan") ? (numberValue("profitActual") / numberValue("profitPlan")) * 100 : 0;
   const revenueFulfillment = numberValue("revenuePlan") ? (numberValue("revenueActual") / numberValue("revenuePlan")) * 100 : 0;
   const average = (profitFulfillment + revenueFulfillment) / 2;
-  const band = corporateKvBands.find((item) => item.test(average));
-  const coefficient = band && band.values[hCode] ? band.values[hCode] : 0;
+  const tableKv = coefficientFromFulfillment(hCode, average);
 
   return {
     profitFulfillment,
     revenueFulfillment,
     average,
-    band,
-    coefficient
+    band: tableKv.band,
+    coefficient: tableKv.coefficient,
+    label: tableKv.label
   };
 }
 
 function readState() {
   const kpsOption = findByCode(kpsOptions, elements.kpsCode.value);
   const kohpsOption = findByCode(kohpsOptions, elements.kohpsCode.value);
-  const isH5 = kohpsOption.code === "H5";
+  const kvInputMode = getKvInputMode();
   const business = calculateBusinessValues(kohpsOption.code);
-  const personalCoefficient = h5CoefficientFromFulfillment(numberValue("personalFulfillment"));
-  const kv = isH5 ? personalCoefficient : business.coefficient;
+  const manualFulfillment = numberValue("personalFulfillment");
+  const effectiveFulfillment = kvInputMode === "table" ? business.average : manualFulfillment;
+  const activeKv = coefficientFromFulfillment(kohpsOption.code, effectiveFulfillment);
 
   return {
     salary: numberValue("salary"),
@@ -190,11 +262,13 @@ function readState() {
     kps: kpsOption.value,
     kohps: kohpsOption.value,
     classificationPercent: kpsOption.value * kohpsOption.value,
-    personalFulfillment: numberValue("personalFulfillment"),
-    personalCoefficient,
-    isH5,
+    manualFulfillment,
+    effectiveFulfillment,
+    kvInputMode,
     business,
-    kv,
+    kvBand: activeKv.band,
+    kvBandLabel: activeKv.label,
+    kv: activeKv.coefficient,
     prp: percentValue("prp"),
     mealDays: defaults.mealDays,
     mealContribution: defaults.mealContribution,
@@ -260,17 +334,56 @@ function renderFormula(state, result) {
   elements.formulaLine.textContent = line.join(" ");
 }
 
+function setMeterValue(element, value, max = 150) {
+  element.style.width = `${clamp((value / max) * 100, 0, 100)}%`;
+}
+
+function renderMode(state) {
+  const isTableMode = state.kvInputMode === "table";
+  const displayFulfillment = isTableMode ? state.effectiveFulfillment : state.manualFulfillment;
+  const sliderValue = clamp(displayFulfillment, 0, 200);
+
+  elements.personalFulfillment.disabled = isTableMode;
+  elements.personalFulfillment.value = String(sliderValue);
+  elements.personalFulfillmentOutput.textContent = formatPlainPercent(displayFulfillment, displayFulfillment % 1 ? 1 : 0);
+  elements.modeTitle.textContent = isTableMode ? "Výpočet z tabulky SW" : "Ručně posuvníkem";
+  elements.resultSource.textContent = isTableMode ? "Tabulka SW" : "Posuvník";
+
+  if (isTableMode) {
+    elements.fulfillmentLabel.textContent = "Plnění pro kV z tabulky";
+    elements.kvModeHint.textContent = "Horní bar je zamčený a kopíruje průměr HV a výnosů ze spodní tabulky.";
+    elements.fulfillmentHint.textContent = state.hCode === "H5"
+      ? "U H5 se průměr z tabulky použije jako plnění pro vzorec H5."
+      : "Pro H1-H4 se průměr z tabulky vyhodnotí proti pásmům firemních cílů.";
+    return;
+  }
+
+  elements.fulfillmentLabel.textContent = state.hCode === "H5"
+    ? "Plnění osobních cílů pro kV"
+    : "Plnění firemních cílů pro kV";
+  elements.kvModeHint.textContent = "Posuvník slouží pro rychlé modelování odměny.";
+  elements.fulfillmentHint.textContent = state.hCode === "H5"
+    ? "H5 používá vzorec osobních cílů."
+    : "Posuvník používá stejná pásma jako tabulka firemních cílů.";
+}
+
 function renderBusiness(state) {
   const business = state.business;
+
   elements.profitFulfillment.textContent = formatPlainPercent(business.profitFulfillment, 2);
   elements.revenueFulfillment.textContent = formatPlainPercent(business.revenueFulfillment, 2);
   elements.businessAverage.textContent = formatPlainPercent(business.average, 2);
-  elements.businessCoefficient.textContent = state.isH5 ? "-" : formatPercent(business.coefficient);
-  elements.businessModeBadge.textContent = state.isH5 ? "H5 používá osobní cíle" : `aktivní ${state.hCode}`;
+  elements.businessCoefficient.textContent = formatPercent(business.coefficient);
+  elements.businessBandLabel.textContent = business.label;
+  elements.businessModeBadge.textContent = state.kvInputMode === "table" ? "aktivně řídí kV" : "náhled z tabulky";
+
+  setMeterValue(elements.profitFulfillmentBar, business.profitFulfillment);
+  setMeterValue(elements.revenueFulfillmentBar, business.revenueFulfillment);
+  setMeterValue(elements.businessAverageBar, business.average);
 }
 
 function renderRules(state) {
-  if (state.isH5) {
+  if (state.hCode === "H5") {
     elements.rulesBadge.textContent = "H5";
     elements.rulesList.innerHTML = `
       <div class="table-wrap">
@@ -283,7 +396,7 @@ function renderRules(state) {
           </thead>
           <tbody>
             ${h5Rules.map(([limit, formula]) => `
-              <tr class="${h5RuleIsActive(limit, state.personalFulfillment) ? "is-active" : ""}">
+              <tr class="${h5RuleIsActive(limit, state.effectiveFulfillment) ? "is-active" : ""}">
                 <td>${limit}</td>
                 <td>${formula}</td>
               </tr>
@@ -310,7 +423,7 @@ function renderRules(state) {
         </thead>
         <tbody>
           ${corporateKvBands.map((band) => `
-            <tr class="${state.business.band === band ? "is-active" : ""}">
+            <tr class="${state.kvBand === band ? "is-active" : ""}">
               <td>${band.label}</td>
               ${["H1", "H2", "H3", "H4"].map((code) => `
                 <td class="${state.hCode === code ? "selected-col" : ""}">${formatPercent(band.values[code])}</td>
@@ -371,7 +484,7 @@ function renderScenarios() {
 function update() {
   const state = readState();
   const result = calculateReward(state);
-  const source = state.isH5 ? "osobní cíle" : "firemní cíle";
+  const source = state.kvInputMode === "table" ? "Tabulka SW" : "Posuvník";
 
   elements.classificationSummary.textContent = `${state.kpsCode} / ${state.hCode}`;
   elements.classificationPercent.value = (state.classificationPercent * 100).toFixed(1);
@@ -379,13 +492,14 @@ function update() {
   elements.kohps.value = (state.kohps * 100).toFixed(0);
   elements.kpsRoleHint.textContent = findByCode(kpsOptions, state.kpsCode).role;
   elements.kohpsRoleHint.textContent = findByCode(kohpsOptions, state.hCode).role;
-  elements.personalTargetGroup.hidden = !state.isH5;
-  elements.personalFulfillmentOutput.textContent = formatPlainPercent(state.personalFulfillment, 0);
   elements.prpOutput.textContent = formatPercent(state.prp);
   elements.coefficientState.textContent = `kV: ${formatPercent(state.kv)} (${source})`;
   elements.annualReward.textContent = formatCurrency(result.annualRewardRounded, 0);
   elements.monthlyReward.textContent = `Měsíčně: ${formatCurrency(result.monthlyReward, 0)}`;
+  elements.resultKv.textContent = formatPercent(state.kv);
+  elements.resultPrp.textContent = formatPercent(state.prp);
 
+  renderMode(state);
   renderFormula(state, result);
   renderBusiness(state);
   renderRules(state);
@@ -401,12 +515,17 @@ function setDefaults() {
     }
     elements[id].value = value;
   });
+
+  elements.kvModeManual.checked = true;
+  elements.kvModeTable.checked = false;
   update();
 }
 
 function addScenario() {
   const { state, result } = update();
-  const name = `${state.kpsCode}/${state.hCode} · ZM ${formatCurrency(state.salary, 0)} · kV ${formatPercent(state.kv)}`;
+  const source = state.kvInputMode === "table" ? "Tabulka SW" : "Posuvník";
+  const name = `${state.kpsCode}/${state.hCode} · ${source} · ZM ${formatCurrency(state.salary, 0)} · kV ${formatPercent(state.kv)}`;
+
   scenarios.unshift({
     name,
     salary: state.salary,

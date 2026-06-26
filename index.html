@@ -9,9 +9,10 @@
   <body>
     <main class="app-shell">
       <header class="topbar">
-        <div>
-          <p class="eyebrow">Model podle souboru vypocet_odmen.xlsx</p>
+        <div class="brand-lockup">
+          <p class="eyebrow">Prémiový model podle souboru vypocet_odmen.xlsx</p>
           <h1>Kalkulačka odměn</h1>
+          <p class="lead">Rychlá simulace posuvníkem i ostrý výpočet z čísel přepsaných z firemního SW.</p>
         </div>
         <div class="toolbar">
           <button class="button button-ghost" type="button" id="resetButton" title="Vrátit hodnoty z Excelu">
@@ -33,13 +34,13 @@
         <form class="panel input-panel" id="rewardForm">
           <div class="section-heading">
             <h2>Vstupy</h2>
-            <span class="status-pill" id="coefficientState">kV: 100 %</span>
+            <span class="status-pill status-pill-strong" id="coefficientState">kV: 100 %</span>
           </div>
 
           <label>
             Základní mzda (ZM)
             <div class="currency-input">
-              <input id="salary" name="salary" type="number" min="0" step="100" value="45000">
+              <input id="salary" name="salary" type="text" inputmode="decimal" value="45000">
               <span>Kč</span>
             </div>
           </label>
@@ -86,12 +87,31 @@
             </div>
           </div>
 
-          <label id="personalTargetGroup">
-            Plnění osobních cílů pro kV
+          <div class="mode-card" aria-label="Zdroj plnění pro kV">
+            <div class="mode-card-title">
+              <span>Zdroj plnění pro kV</span>
+              <strong id="modeTitle">Ručně posuvníkem</strong>
+            </div>
+            <div class="segmented-control" role="radiogroup" aria-label="Zdroj plnění pro kV">
+              <label>
+                <input id="kvModeManual" name="kvInputMode" type="radio" value="manual" checked>
+                <span>Posuvník</span>
+              </label>
+              <label>
+                <input id="kvModeTable" name="kvInputMode" type="radio" value="table">
+                <span>Tabulka SW</span>
+              </label>
+            </div>
+            <small class="mode-hint" id="kvModeHint">Posuvník slouží pro rychlé modelování odměny.</small>
+          </div>
+
+          <label id="fulfillmentControlGroup">
+            <span id="fulfillmentLabel">Plnění pro kV</span>
             <div class="range-line">
-              <input id="personalFulfillment" name="personalFulfillment" type="range" min="0" max="200" step="1" value="100">
+              <input id="personalFulfillment" name="personalFulfillment" type="range" min="0" max="200" step="0.1" value="100">
               <output id="personalFulfillmentOutput">100 %</output>
             </div>
+            <small class="role-hint" id="fulfillmentHint">V režimu posuvníku se výsledek počítá z této hodnoty.</small>
           </label>
 
           <label>
@@ -101,18 +121,33 @@
               <output id="prpOutput">100 %</output>
             </div>
           </label>
-
         </form>
 
         <section class="panel results-panel" aria-live="polite">
           <div class="section-heading">
             <h2>Výsledek</h2>
+            <span class="status-pill">roční odměna</span>
           </div>
 
           <div class="result-hero">
             <span>Celkově za rok</span>
             <strong id="annualReward">0 Kč</strong>
             <small id="monthlyReward">Měsíčně: 0 Kč</small>
+          </div>
+
+          <div class="result-metrics" aria-label="Hlavní koeficienty výpočtu">
+            <div>
+              <span>kV</span>
+              <strong id="resultKv">100 %</strong>
+            </div>
+            <div>
+              <span>PRP</span>
+              <strong id="resultPrp">100 %</strong>
+            </div>
+            <div>
+              <span>Zdroj</span>
+              <strong id="resultSource">Posuvník</strong>
+            </div>
           </div>
 
           <div class="formula-box">
@@ -123,64 +158,70 @@
       </section>
 
       <section class="lower-grid">
-        <section class="panel">
+        <section class="panel business-panel">
           <div class="section-heading">
             <h2>Podklad firemních cílů</h2>
-            <span class="status-pill" id="businessModeBadge">pro H1-H4</span>
+            <span class="status-pill" id="businessModeBadge">náhled z tabulky</span>
           </div>
+
+          <p class="panel-note">Sem můžeš přepsat hodnoty z jiného SW. V režimu Tabulka SW se průměr HV a výnosů promítne do horního baru i do výpočtu.</p>
 
           <div class="business-grid">
             <label>
               HV plán
               <div class="currency-input">
-                <input id="profitPlan" type="number" min="1" step="100000" value="67980000">
+                <input id="profitPlan" type="text" inputmode="decimal" value="67980000">
                 <span>Kč</span>
               </div>
             </label>
             <label>
               HV skutečnost
               <div class="currency-input">
-                <input id="profitActual" type="number" min="0" step="100000" value="48510000">
+                <input id="profitActual" type="text" inputmode="decimal" value="48510000">
                 <span>Kč</span>
               </div>
             </label>
             <label>
               Výnosy plán
               <div class="currency-input">
-                <input id="revenuePlan" type="number" min="1" step="100000" value="409800000">
+                <input id="revenuePlan" type="text" inputmode="decimal" value="409800000">
                 <span>Kč</span>
               </div>
             </label>
             <label>
               Výnosy skutečnost
               <div class="currency-input">
-                <input id="revenueActual" type="number" min="0" step="100000" value="375095478">
+                <input id="revenueActual" type="text" inputmode="decimal" value="375095478">
                 <span>Kč</span>
               </div>
             </label>
           </div>
 
           <div class="business-summary">
-            <div>
+            <div class="metric-card">
               <span>HV</span>
               <strong id="profitFulfillment">0 %</strong>
+              <div class="meter" aria-hidden="true"><i id="profitFulfillmentBar"></i></div>
             </div>
-            <div>
+            <div class="metric-card">
               <span>Výnosy PS</span>
               <strong id="revenueFulfillment">0 %</strong>
+              <div class="meter" aria-hidden="true"><i id="revenueFulfillmentBar"></i></div>
             </div>
-            <div>
+            <div class="metric-card">
               <span>Průměr</span>
               <strong id="businessAverage">0 %</strong>
+              <div class="meter meter-gold" aria-hidden="true"><i id="businessAverageBar"></i></div>
             </div>
-            <div>
-              <span>kV pro vybrané H</span>
+            <div class="metric-card metric-card-accent">
+              <span>kV z tabulky</span>
               <strong id="businessCoefficient">0 %</strong>
+              <small id="businessBandLabel">mimo pásma</small>
             </div>
           </div>
         </section>
 
-        <section class="panel">
+        <section class="panel rules-panel">
           <div class="section-heading">
             <h2>Tabulka kV</h2>
             <span class="status-pill" id="rulesBadge">H5</span>
@@ -233,9 +274,9 @@
           <table>
             <thead>
               <tr>
-            <th>Scénář</th>
-            <th>ZM</th>
-            <th>kV</th>
+                <th>Scénář</th>
+                <th>ZM</th>
+                <th>kV</th>
                 <th>Roční RP</th>
                 <th>Měsíční RP</th>
                 <th>Celkem měsíčně</th>
