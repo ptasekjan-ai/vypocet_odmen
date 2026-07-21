@@ -90,19 +90,19 @@
           <div class="mode-card" aria-label="Zdroj plnění pro kV">
             <div class="mode-card-title">
               <span>Zdroj plnění pro kV</span>
-              <strong id="modeTitle">Ručně posuvníkem</strong>
+              <strong id="modeTitle">Výpočet z tabulky SW</strong>
             </div>
             <div class="segmented-control" role="radiogroup" aria-label="Zdroj plnění pro kV">
               <label>
-                <input id="kvModeManual" name="kvInputMode" type="radio" value="manual" checked>
+                <input id="kvModeManual" name="kvInputMode" type="radio" value="manual">
                 <span>Posuvník</span>
               </label>
               <label>
-                <input id="kvModeTable" name="kvInputMode" type="radio" value="table">
+                <input id="kvModeTable" name="kvInputMode" type="radio" value="table" checked>
                 <span>Tabulka SW</span>
               </label>
             </div>
-            <small class="mode-hint" id="kvModeHint">Posuvník slouží pro rychlé modelování odměny.</small>
+            <small class="mode-hint" id="kvModeHint">Horní bar je zamčený a kopíruje průměr HV a výnosů ze spodní tabulky.</small>
           </div>
 
           <label id="fulfillmentControlGroup">
@@ -146,7 +146,7 @@
             </div>
             <div>
               <span>Zdroj</span>
-              <strong id="resultSource">Posuvník</strong>
+              <strong id="resultSource">Tabulka SW</strong>
             </div>
           </div>
 

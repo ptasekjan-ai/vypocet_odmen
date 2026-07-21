@@ -516,8 +516,8 @@ function setDefaults() {
     elements[id].value = value;
   });
 
-  elements.kvModeManual.checked = true;
-  elements.kvModeTable.checked = false;
+  elements.kvModeManual.checked = false;
+  elements.kvModeTable.checked = true;
   update();
 }
 
