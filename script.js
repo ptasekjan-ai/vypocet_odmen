@@ -48,10 +48,10 @@ const defaults = {
   annualBenefit: 9200,
   incomeIncrease: 7,
   legacyCoefficient: 0.39535,
-  profitPlan: 67980000,
-  profitActual: 48510000,
-  revenuePlan: 409800000,
-  revenueActual: 375095478
+  profitPlan: 82695000,
+  profitActual: 82695000,
+  revenuePlan: 424200000,
+  revenueActual: 424200000
 };
 
 const elements = {};
